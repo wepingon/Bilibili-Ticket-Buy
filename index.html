@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="./js/axios.js"></script>
+    <script src="./js/vue.global.js"></script>
+</head>
+<body>
+    <div id="app" class="app">
+
+        <div class="content_box">
+            <div class="left_box">
+                <div class="big_box">
+                    <div class="buyer_box">
+                        <div class="text">
+                            <span>当前时间：{{nowTimeCn}}</span>
+                        </div>
+                        <div class="title">
+                            <span>请先预填你的观演者信息，抢票更快一步</span>
+                        </div>
+                        <div class="contact">
+                            <div class="text">
+                                <span>预填联系人信息</span>
+                            </div>
+                            <span>联系人：<input type="text" placeholder="联系人" v-model="contactName"/></span>
+                            <span>联系电话：<input type="text" placeholder="联系电话" v-model="contactNumber"/></span>
+                        </div>
+                        <div class="realname">
+                            <div class="text">
+                                <span>选择实名观演者</span>
+                            </div>
+                            <div class="button">
+                                <button @click="getRealnameList">获取实名观演者信息</button><span>←记得先获取实名观演者信息</span>
+                            </div>
+                            <div v-for="s of realnameList" @click="choiceRealname(s.id)" :class="s.id == currentRealnameId ? 'single_name active':'single_name'">
+                                <div class="name">
+                                    <span>姓名：{{s.name}}</span>
+                                </div>
+                                <div class="identifyId">
+                                    <span>身份证：{{s.personal_id}}</span>
+                                </div>
+                                <div class="phoneNumber">
+                                    <span>电话：{{s.tel}}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>    
+                </div>
+                
+                <div class="input_box">
+                    <span>将于</span><input type="datetime-local" placeholder="" v-model="targetTimeCn" /><span>开始执行脚本</span><button @click="timestampOrder">确定</button>
+
+                </div>
+
+                <div class="input_box">
+                    <input type="text" placeholder="请输入展览Id" v-model="projectId" :disabled="disabledTag"/>
+                    <button @click="getTicketInf" :disabled="disabledTag">查询</button>
+                    <button @click="checkOrder">确认信息</button>
+                </div>
+                <div class="big_box" v-show="confirmToken != '' ">
+                    <div class="confirmInformation_box">
+                        <div class="title">
+                            <span>请确认你的下单信息</span>
+                        </div>
+                        <div class="inf" >
+                            <span>确认信息token:{{confirmToken}}</span>
+                            <span>请求时间:{{confirmOrigin}}</span>
+                            <a :href="reptHref" target="_blank">快速跳转至下单页面</a>
+                        </div>
+                        <!-- <div class="contact">
+                            <span>联系人：<input type="text" placeholder="联系人" v-model="contactName"/></span>
+                            <span>联系电话：<input type="text" placeholder="联系电话" v-model="contactNumber"/></span>
+                        </div> -->
+                        <div class="button_box">
+                            <button @click="orderOrder">确认下单</button>
+                            <button @click="setTimeOutOrder">轮询下单</button>
+                            <button @click="delSto">取消轮询</button>
+                        </div>
+                        <div class="success_text" v-show="orderId != ''">
+                            <span>你已下单成功</span>
+                            <span>订单编号：{{orderId}}</span>
+                            <span>下单时间：{{orderCreateTime}}</span>
+                            <span>订单token：{{orderToken}}</span>
+                            <a :href="reptOrderPage" target="_blank">快速至订单页面</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="controlSystem_box">
+                    <div class="title">
+                        <span>控制台输出详情</span>
+                    </div>
+                    <div class="text">
+                        <span v-show="text != ''">{{text}}</span>
+                    </div>
+                </div>
+                
+            </div>
+
+            <div class="right_box">
+               
+                
+        
+        
+                <div class="va_box" >
+                    <h3 v-show="veName != ''">{{veName}}</h3>
+                    <h5 v-show="project_label != ''">展览日期：{{project_label}}</h5>
+                    <a :href="projectId != 0  ? 'https://show.bilibili.com/platform/detail.html?id=' + projectId : '#'" target="_blank" v-show="veName != ''">快速直达详情页面</a>
+                    <div class="screen_box" v-for="ss of ticketList">
+                        <div class="saleTag">
+                            <span>该日票种{{ss.saleFlag.display_name}}</span>
+                        </div>
+                        <div class="title">
+                            <span>{{ss.name}}</span>
+                        </div>
+                        
+                        <div class="allTicket_box">
+                            <div  v-for="s of ss.ticket_list" :class="skuId == s.id ? 'ticket_box active' : 'ticket_box'" data-skuid="s.id"  @click="test(ss.id,s.id,s.price)" >
+                                <div class="saleTag">
+                                    <span>该票种{{s.sale_flag.display_name}}</span>
+                                </div>
+                                <div class="name">
+                                    <span>{{s.desc}}</span>
+                                </div>
+                                <div class="price">
+                                    <span>{{s.price / 100}} 元</span>
+                                </div>
+                                <div class="saleStart">
+                                    <span>开售时间：{{getNowTime(s.saleStart)}}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text">
+                            <span>该日票种开售时间：{{getNowTime(ss.sale_start)}}</span>
+                            <span>开售时间前禁止点击确认信息，以免账号遭遇风控！！！！！</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+        
+        
+        
+    </div>
+
+    
+    <script>
+        var sooInter;
+        var timeInter;
+        var targetInter;
+        const { ref,reactive } = Vue;
+        const app = Vue.createApp({
+            setup(){
+                const msg = ref('OK！！！！！');
+                const projectId = ref('97603');
+                const ticketList = ref([]);
+                const text = ref('');
+                const veName = ref('');
+                const project_label = ref('');
+                const skuId = ref('');
+                const screenId = ref('');
+                const confirmToken = ref('');
+                const confirmOrigin = ref('');
+                const disabledTag = ref(false);
+                const contactName = ref('aaa');
+                const contactNumber = ref('13700000000');
+                const orderId = ref('');
+                const orderCreateTime = ref('');
+                const orderToken = ref('');
+                const payMoney = ref('');
+                const reptHref = ref('#');
+                const reptOrderPage = ref('#');
+                const testArray = ref('');
+                const realnameList = ref([]);
+                const currentRealnameId = ref('');
+                const nowTimeCn = ref('');
+                const nowTimestamp = ref('');
+                const targetTimestamp = ref('');
+                const targetTimeCn = ref('');
+                const getRealnameList = ()=>{
+                    realnameList.value = '';
+                    text.value = '获取实名观演者信息中....'
+                    axios.post('http://127.0.0.1:3001/getRealnameList').then(res=>{
+                        if(res.data.code == 200){
+                            if(!res.data.result.errno){
+                                realnameList.value = res.data.result.data.list
+                                text.value = '获取实名观演者信息成功'
+                            }else{
+                                text.value = res.data.result.msg;
+                            }
+                        }else{
+                            text.value = '获取实名观演者信息错误';
+                            return false;
+                        }
+                    }).catch(err=>{
+                        text.value = '网络错误或者连接失败';
+                        console.log(res.data)
+                        return false;
+                    })
+                };
+                const getNowTime = (mill,way)=>{
+                    let a = new Date(Number(mill) * 1000);
+                    let ayear = a.getFullYear();
+                    let amonth = a.getMonth() + 1;
+                    let aday = a.getDate();
+                    let ahour = a.getHours();
+                    let aminutes = a.getMinutes();
+                    let aseconds = a.getSeconds();
+
+                    amonth = amonth < 10 ? '0' + amonth : amonth;
+                    aday = aday < 10 ? '0' + aday : aday;
+                    ahour = ahour < 10 ? '0' + ahour : ahour;
+                    aminutes = aminutes < 10 ? '0' + aminutes : aminutes;
+                    aseconds = aseconds < 10 ? '0' + aseconds : aseconds;
+
+                    switch(way){
+                        case 'payTime' : return `${ayear}${amonth}${aday}${ahour}${aminutes}${aseconds}`;break;
+                        default: return `${ayear}-${amonth}-${aday} ${ahour}:${aminutes}:${aseconds}`;break;
+                    }
+                }
+                const choiceRealname = (id)=>{
+                    currentRealnameId.value = id;
+                }
+                const delSto = ()=>{
+                    clearInterval(sooInter);
+                    text.value = '轮询下单操作已取消'
+                }
+                const setTimeOutOrder = ()=>{
+                    orderOrder();
+                    sooInter = setInterval(()=>{orderOrder()},2000);
+                }
+                const getTicketInf = ()=>{
+                    veName.value = '';
+                    skuId.value = '';
+                    screenId.value = '';
+                    text.value = '获取展览数据中...';
+                    project_label.value = '';
+                    ticketList.value = [];
+                    axios.post('http://127.0.0.1:3001/getTicketInformation',
+                        {
+                            projectId:projectId.value
+                        }
+                    ).then(res=>{
+                        if(res.data.code == 200){
+                            
+                            if(!res.data.result.errno){
+                                text.value = '';
+                                ticketList.value = res.data.result.data.screen_list
+                                veName.value = res.data.result.data.name
+                                project_label.value = res.data.result.data.project_label
+                                console.log('ticketList',ticketList.value);
+                                text.value = '获取展览数据成功';
+                                return true;
+                            }else{
+                                text.value = res.data.result.msg;
+                            }
+                            
+                        }else{
+                            text.value = '获取展览数据失败！';
+                            return false;
+                        }
+                    }).catch(err=>{
+                        text.value = '网络错误或者连接失败';
+                        console.log(res.data)
+                        return false;
+                    })
+                };
+                const timeSetOrder = ()=>{
+                    if(nowTimestamp.value >= targetTimestamp.value){
+                        checkOrder();
+                        clearInterval(targetInter);
+                        return true
+                    }else{
+                        console.log('等候时间下单中...');
+                        return false
+                    }
+                };
+                const timestampOrder = ()=>{
+                    console.log('targetTimestamp.value->',targetTimeCn.value)
+                    let a = new Date(targetTimeCn.value);
+                    targetTimestamp.value  = a.getTime();
+                    console.log(targetTimestamp.value);
+                    alert('定时设置成功！->');
+                    targetInter = setInterval(()=>{timeSetOrder()},1000);
+                    
+                }
+                const test = (a,b,c)=>{
+                    screenId.value = '';
+                    skuId.value = '';
+                    
+                    screenId.value = a;
+                    skuId.value = b;
+                    payMoney.value = c;
+                    console.log(`screenId->${screenId.value},skuId->${skuId.value},payMoney->${payMoney.value}`);
+                }
+                const checkOrder = ()=>{
+                    text.value = '';
+                    confirmToken.value ='';
+                    confirmOrigin.value ='';
+                    if(skuId.value == ''){
+                        text.value = '请选择票种'
+                        return false;
+                    }else{
+                        axios.post("http://127.0.0.1:3001/requestOrderToken",
+                        {
+                            projectId:projectId.value,
+                            screenId:screenId.value,
+                            skuId:skuId.value
+                        }
+                    ).then(res=>{
+                        if(res.data.code == 200){
+                            
+                            if(!res.data.result.errno){
+                                console.log(res.data);
+                                disabledTag.value = true
+                                confirmToken.value = res.data.result.data.token;
+                                confirmOrigin.value = res.data.result.data.ga_data.grisk_id.split('_')[2];
+
+                                reptHref.value = `https://show.bilibili.com/platform/confirmOrder.html?token=${confirmToken.value}&project_id=${projectId.value}`
+
+                                return true;
+                            }else{
+                                console.log(res.data);
+                                text.value = res.data.result.msg;
+                            }
+                            
+                            }else{
+                                text.value = '下单失败！';
+                                return false;
+                            }
+                        })
+                    }
+                    
+                };
+                const checkAAA = ()=>{
+                    
+                    console.log(testArray.value)
+                    orderToken.value = testArray.value.result.data.token;
+                    orderOrigin.value = testArray.value.result.data.ga_data.grisk_id.split('_')[2];
+                    console.log('orderToken.value->',orderToken.value);
+                    console.log('orderOrigin.value->',orderOrigin.value);
+                }
+                const orderOrder = ()=>{
+                    text.value = '下单中，请稍后...';
+
+                    orderId.value ='';
+                    orderCreateTime.value = '';
+                    orderToken.value = '';
+
+                    axios.post("http://127.0.0.1:3001/orderOrder",
+                        {
+                            projectId:projectId.value,
+                            screenId:screenId.value,
+                            skuId:skuId.value,
+                            orderToken:confirmToken.value,
+                            pay_money:payMoney.value,
+                            orderOrigin:confirmOrigin.value,
+                            buyer:contactName.value,
+                            tel:contactNumber.value,
+                            buyer_infoJson:realnameList.value.filter(res=>{return res.id == currentRealnameId.value})
+                        }
+                    ).then(res=>{
+                        if(res.data.code == 200){
+                            
+                            if(!res.data.result.errno){
+                                console.log(res.data);
+
+                                orderId.value = res.data.result.data.orderId;
+                                orderCreateTime.value = res.data.result.data.orderCreateTime;
+                                orderToken.value = res.data.result.data.token;
+                                
+
+
+                                reptOrderPage.value = `https://show.bilibili.com/platform/orderDetail.html?order_id=${orderId.value}`
+                                text.value = '下单成功，请前往订单页面进行支付';
+                                clearInterval(sooInter);
+                                return true;
+                            }else{
+                                console.log(res.data);
+                                text.value = res.data.result.msg;
+                            }
+                            
+                        }else{
+                            text.value = '下单失败！';
+                            return false;
+                        }
+                    })
+                }
+
+                return {
+                    msg,
+                    text,
+                    projectId,
+                    ticketList,
+                    getTicketInf,
+                    checkOrder,
+                    veName,
+                    project_label,
+                    skuId,
+                    test,
+                    screenId,
+                    confirmToken,
+                    confirmOrigin,
+                    checkAAA,
+                    testArray,
+                    disabledTag,
+                    contactName,
+                    contactNumber,
+                    payMoney,
+                    orderOrder,
+                    orderId,
+                    orderCreateTime,
+                    orderToken,
+                    reptHref,
+                    reptOrderPage,
+                    realnameList,
+                    currentRealnameId,
+                    choiceRealname,
+                    setTimeOutOrder,
+                    getRealnameList,
+                    delSto,
+                    getNowTime,
+                    nowTimeCn,
+                    nowTimestamp,
+                    targetTimestamp,
+                    timeSetOrder,
+                    timestampOrder,
+                    targetTimeCn
+                }
+            },
+            mounted(){
+                console.log(this.ticketList);
+                timeInter = setInterval(()=>{
+                    let a =new Date
+                    let ayear = a.getFullYear();
+                    let amonth = a.getMonth() + 1;
+                    let aday = a.getDate();
+                    let ahour = a.getHours();
+                    let aminutes = a.getMinutes();
+                    let aseconds = a.getSeconds();
+
+                    amonth = amonth < 10 ? '0' + amonth : amonth;
+                    aday = aday < 10 ? '0' + aday : aday;
+                    ahour = ahour < 10 ? '0' + ahour : ahour;
+                    aminutes = aminutes < 10 ? '0' + aminutes : aminutes;
+                    aseconds = aseconds < 10 ? '0' + aseconds : aseconds;
+
+                    this.nowTimeCn = `${ayear}-${amonth}-${aday} ${ahour}:${aminutes}:${aseconds}`;
+                    this.nowTimestamp = a.getTime();
+                },
+                    1000)
+            }
+        })
+        const App = app.mount("#app");
+
+    </script>
+
+    <style>
+        .app{
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: row;
+        }
+        .content_box{
+            border: 1px solid black;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            border-radius: 30px;
+            box-shadow: 0 0 2px;
+        }
+        .content_box > .left_box{
+            margin: 0 8px;
+        }
+        .content_box > .right_box{
+            margin: 0 8px;
+        }
+
+        
+        body{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .input_box {
+            text-align: center;
+        }
+        .input_box > input{
+            padding: 5px;
+            width: 200px;
+            border-radius: 10px;  
+            border: 1px solid black;       
+                   
+        }
+        .input_box > button{
+            padding: 5px;
+            width: 80px;
+            margin-left: 20px;
+            border-radius: 10px;
+            border: 1px solid black;
+            transition:background-color 0.2s;
+        }
+        .input_box > button:hover{
+            background-color: rgb(215, 215, 215);
+            cursor: pointer;
+        }
+
+        .va_box {
+            text-align: center;
+        }
+        .va_box > h3 , .va_box > h5{
+            margin: 5px 0;
+        }
+        .screen_box{
+            border: 1px solid black;
+            width: 800px;
+            padding: 10px;
+            border-radius: 20px;
+            margin-bottom: 10px;
+        }
+        .screen_box > .title{
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom:10px;
+           
+        }
+        .screen_box > .saleTag{
+            text-align: left;
+            font-size: 18px;
+            font-weight: bold;
+            color: red;
+        }
+        .screen_box > .text{
+            display: flex;
+            flex-direction: column;
+            margin: 3px 0;
+            font-weight: bold;
+        }
+        .screen_box > .allTicket_box{
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around;
+            flex-wrap: wrap;
+
+        }
+        .screen_box > .allTicket_box > .ticket_box{
+            border: 1px solid black;
+            width: 150px;
+            padding: 10px;
+            border-radius: 20px;
+            text-align: center;
+            flex-shrink: 0;
+            margin-bottom: 10px;
+            transition: 0.2s;
+        }
+        .screen_box > .allTicket_box > .ticket_box >.saleTag{
+            text-align: left;
+            font-size: 18px;
+            font-weight: bold;
+            color: red;
+        }
+        .screen_box > .allTicket_box > .ticket_box > .saleStart{
+            font-size: 15px;
+        }
+        .screen_box > .allTicket_box > .ticket_box:hover{
+            background-color: rgb(218, 218, 218);
+            cursor: pointer;
+        }
+        .screen_box > .allTicket_box > .ticket_box.active{
+            background-color: rgb(197, 197, 197);
+        }
+        .screen_box >  .allTicket_box > .ticket_box > .name{
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .screen_box > .allTicket_box >  .ticket_box > .price{
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .big_box {
+            display: flex;
+            justify-content: center;
+        }
+        .confirmInformation_box{
+            
+            border: 1px solid black;
+            padding: 10px;
+            margin-top: 10px;
+            width: 400px;
+            border-radius: 20px;
+            box-shadow: 0 0 3px;
+        }
+        .confirmInformation_box > .title{
+            text-align: center;
+            font-size: 22px;
+            font-weight: bold;
+
+        }
+        .confirmInformation_box > .contact{
+            display: flex;
+            flex-direction: column;
+            
+        }
+        .confirmInformation_box > .inf{
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        .confirmInformation_box > .contact > span{
+            margin-bottom: 10px;
+        }
+        .confirmInformation_box > .button_box{
+            text-align: center;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-around;
+        }
+        .confirmInformation_box > .button_box > button{
+            padding: 8px 10px;
+            border: 1px solid black;
+            border-radius: 20px;
+            transition: background-color 0.2s;
+        }
+
+        .confirmInformation_box > .button_box > button:hover{
+            background-color: rgb(215, 215, 215);
+            cursor: pointer;
+        }
+        .confirmInformation_box > .success_text{
+            border: 1px solid red;
+            padding: 5px;
+            display: flex;
+            flex-direction: column;
+            color: red;
+
+        }
+
+        .buyer_box{
+            padding: 10px;
+            border: 1px solid black;
+            margin-bottom: 10px;
+            width: 400px;
+            border-radius: 30px;
+        }
+        .buyer_box > .title{
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .buyer_box > .contact{
+            display: flex;
+            flex-direction: column;
+            
+        }
+        .buyer_box > .contact > span{
+            margin: 5px 0;
+        }
+        /* .buyer_box > .realname {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        } */
+        .buyer_box > .realname > .text{
+            text-align: center;
+            margin: 5px 0 ;
+        }
+        .buyer_box > .realname > .single_name{
+            border: 1px solid black;
+            padding: 5px;
+            border-radius: 10px;
+            transition: background-color 0.2s;
+            margin: 5px 0;
+        } 
+        .buyer_box > .realname > .single_name:hover{
+            background-color: rgb(250, 227, 227);
+            cursor: pointer;
+        }
+        .buyer_box > .realname > .single_name.active{
+            background-color: rgb(250, 227, 227);
+        }
+        .controlSystem_box{
+            margin-top: 10px;
+            border: 1px solid black;
+            padding: 10px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .controlSystem_box > .title{
+            margin-bottom: 10px;
+        }
+        .controlSystem_box > .text {
+            color: red;
+            text-align: center;
+            border: 1px solid black;
+            padding: 10px;
+        }
+        .text {
+            color: red;
+            text-align: center;
+        }
+    </style>
+</body>
+</html>
