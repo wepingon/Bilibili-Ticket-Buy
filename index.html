@@ -8,9 +8,9 @@
     <script src="./js/vue.global.js"></script>
 </head>
 <body>
-    <div id="app" class="app">
+    <div id="app" >
 
-        <div class="content_box">
+        <div class="content_box"  :class="orderingFlag ? 'content_box ticketActive':'content_box'">
             <div class="left_box">
                 <div class="big_box">
                     <div class="buyer_box">
@@ -50,9 +50,15 @@
                 </div>
                 
                 <div class="input_box">
-                    <span>将于</span><input type="datetime-local" placeholder="" v-model="targetTimeCn" /><span>开始执行脚本</span><button @click="timestampOrder">确定</button>
-
+                    <span>设定脚本执行时间：</span><input type="datetime-local" placeholder="" v-model="targetTimeCn" />
+                    <button @click="timestampOrder">确定</button>
                 </div>
+
+                <div class="timestampText" v-show="targetTimestampFlag">
+                    <span>已设置定时任务，执行时间：{{getNowTime(targetTimestamp / 1000 )}}</span>
+                    <span>请勿刷新页面，否则需要重新设置。</span>
+                </div>
+
 
                 <div class="input_box">
                     <input type="text" placeholder="请输入展览Id" v-model="projectId" :disabled="disabledTag"/>
@@ -116,7 +122,7 @@
                         </div>
                         
                         <div class="allTicket_box">
-                            <div  v-for="s of ss.ticket_list" :class="skuId == s.id ? 'ticket_box active' : 'ticket_box'" data-skuid="s.id"  @click="test(ss.id,s.id,s.price)" >
+                            <div  v-for="s of ss.ticket_list" :class="skuId == s.id ? 'ticket_box active' : 'ticket_box'" data-skuid="s.id"  @click="clickTicket(ss.id,s.id,s.price)" >
                                 <div class="saleTag">
                                     <span>该票种{{s.sale_flag.display_name}}</span>
                                 </div>
@@ -154,19 +160,26 @@
         const { ref,reactive } = Vue;
         const app = Vue.createApp({
             setup(){
+                //可修改代码
+                const projectId = ref('97603');//展览Id,可预填
+                const setInterTime = ref(2000) //轮询下单默认2000毫秒（2秒），可修改，但不建议改成比2000更小。
+                const contactName = ref('aaa');//联系人姓名
+                const contactNumber = ref('13700000000');//联系人电话
+                //可修改代码 结束
+
+                //下列所有代码无需修改。
+                const orderingFlag = ref(false);
                 const msg = ref('OK！！！！！');
-                const projectId = ref('97603');
                 const ticketList = ref([]);
                 const text = ref('');
                 const veName = ref('');
                 const project_label = ref('');
                 const skuId = ref('');
                 const screenId = ref('');
-                const confirmToken = ref('');
-                const confirmOrigin = ref('');
+                const confirmToken = ref(''); 
+                const confirmOrigin = ref(''); 
                 const disabledTag = ref(false);
-                const contactName = ref('aaa');
-                const contactNumber = ref('13700000000');
+                
                 const orderId = ref('');
                 const orderCreateTime = ref('');
                 const orderToken = ref('');
@@ -174,6 +187,7 @@
                 const reptHref = ref('#');
                 const reptOrderPage = ref('#');
                 const testArray = ref('');
+                const targetTimestampFlag = ref(false);
                 const realnameList = ref([]);
                 const currentRealnameId = ref('');
                 const nowTimeCn = ref('');
@@ -217,7 +231,6 @@
                     aseconds = aseconds < 10 ? '0' + aseconds : aseconds;
 
                     switch(way){
-                        case 'payTime' : return `${ayear}${amonth}${aday}${ahour}${aminutes}${aseconds}`;break;
                         default: return `${ayear}-${amonth}-${aday} ${ahour}:${aminutes}:${aseconds}`;break;
                     }
                 }
@@ -230,7 +243,7 @@
                 }
                 const setTimeOutOrder = ()=>{
                     orderOrder();
-                    sooInter = setInterval(()=>{orderOrder()},2000);
+                    sooInter = setInterval(()=>{orderOrder()},setInterTime.value);
                 }
                 const getTicketInf = ()=>{
                     veName.value = '';
@@ -270,7 +283,7 @@
                 };
                 const timeSetOrder = ()=>{
                     if(nowTimestamp.value >= targetTimestamp.value){
-                        checkOrder();
+                        checkOrder('qo');
                         clearInterval(targetInter);
                         return true
                     }else{
@@ -279,15 +292,27 @@
                     }
                 };
                 const timestampOrder = ()=>{
-                    console.log('targetTimestamp.value->',targetTimeCn.value)
-                    let a = new Date(targetTimeCn.value);
-                    targetTimestamp.value  = a.getTime();
-                    console.log(targetTimestamp.value);
-                    alert('定时设置成功！->');
-                    targetInter = setInterval(()=>{timeSetOrder()},1000);
+                    if(targetTimeCn.value == ''){
+                        alert('请正确设置时间！');
+                        return false;
+                    }else{
+                        if(screenId.value == '' || skuId.value == ''){
+                            alert('请先选择票档后再设置定时任务！');
+                        }else{
+                            // console.logtest('targetTimestamp.value->',targetTimeCn.value)
+                            let a = new Date(targetTimeCn.value);
+                            targetTimestamp.value  = a.getTime();
+                            // console.log(targetTimestamp.value);
+                            alert('定时设置成功!');
+                            targetTimestampFlag.value = true;
+                            targetInter = setInterval(()=>{timeSetOrder()},1000);
+                        }
+                        
+                    }
+                    
                     
                 }
-                const test = (a,b,c)=>{
+                const clickTicket = (a,b,c)=>{
                     screenId.value = '';
                     skuId.value = '';
                     
@@ -296,102 +321,105 @@
                     payMoney.value = c;
                     console.log(`screenId->${screenId.value},skuId->${skuId.value},payMoney->${payMoney.value}`);
                 }
-                const checkOrder = ()=>{
-                    text.value = '';
-                    confirmToken.value ='';
-                    confirmOrigin.value ='';
-                    if(skuId.value == ''){
-                        text.value = '请选择票种'
-                        return false;
-                    }else{
-                        axios.post("http://127.0.0.1:3001/requestOrderToken",
-                        {
-                            projectId:projectId.value,
-                            screenId:screenId.value,
-                            skuId:skuId.value
-                        }
-                    ).then(res=>{
-                        if(res.data.code == 200){
-                            
-                            if(!res.data.result.errno){
-                                console.log(res.data);
-                                disabledTag.value = true
-                                confirmToken.value = res.data.result.data.token;
-                                confirmOrigin.value = res.data.result.data.ga_data.grisk_id.split('_')[2];
+                const checkOrder = (flag)=>{
 
-                                reptHref.value = `https://show.bilibili.com/platform/confirmOrder.html?token=${confirmToken.value}&project_id=${projectId.value}`
-
-                                return true;
-                            }else{
-                                console.log(res.data);
-                                text.value = res.data.result.msg;
+                        text.value = '';
+                        confirmToken.value ='';
+                        confirmOrigin.value ='';
+                        if(skuId.value == ''){
+                            text.value = '请选择票种'
+                            return false;
+                        }else{
+                            axios.post("http://127.0.0.1:3001/requestOrderToken",
+                            {
+                                projectId:projectId.value,
+                                screenId:screenId.value,
+                                skuId:skuId.value
                             }
-                            
+                        ).then(res=>{
+                            if(res.data.code == 200){
+                                
+                                if(!res.data.result.errno){
+                                    console.log(res.data);
+                                    disabledTag.value = true
+                                    confirmToken.value = res.data.result.data.token;
+                                    confirmOrigin.value = res.data.result.data.ga_data.grisk_id.split('_')[2];
+
+                                    reptHref.value = `https://show.bilibili.com/platform/confirmOrder.html?token=${confirmToken.value}&project_id=${projectId.value}`
+                                    if(flag == 'qo'){
+                                        orderOrder();
+                                        sooInter = setInterval(()=>{orderOrder()},setInterTime.value);
+                                    }else{
+                                        return true;
+                                    }
+                                    
+                                }else{
+                                    console.log(res.data);
+                                    text.value = res.data.result.msg;
+                                }
+                                
+                                }else{
+                                    text.value = '下单失败！';
+                                    return false;
+                                }
+                            })
+                    }
+                    
+                    
+                };
+                const orderOrder = ()=>{
+                        text.value = '下单中，请稍后...';
+                        orderingFlag.value = true;
+                        orderId.value ='';
+                        orderCreateTime.value = '';
+                        orderToken.value = '';
+
+                        axios.post("http://127.0.0.1:3001/orderOrder",
+                            {
+                                projectId:projectId.value,
+                                screenId:screenId.value,
+                                skuId:skuId.value,
+                                orderToken:confirmToken.value,
+                                pay_money:payMoney.value,
+                                orderOrigin:confirmOrigin.value,
+                                buyer:contactName.value,
+                                tel:contactNumber.value,
+                                buyer_infoJson:realnameList.value.filter(res=>{return res.id == currentRealnameId.value})
+                            }
+                        ).then(res=>{
+                            if(res.data.code == 200){
+                                
+                                if(!res.data.result.errno){
+                                    console.log(res.data);
+
+                                    orderId.value = res.data.result.data.orderId;
+                                    orderCreateTime.value = res.data.result.data.orderCreateTime;
+                                    orderToken.value = res.data.result.data.token;
+                                    
+
+                                    orderingFlag.value = false;
+                                    reptOrderPage.value = `https://show.bilibili.com/platform/orderDetail.html?order_id=${orderId.value}`
+                                    text.value = '下单成功，请前往订单页面进行支付';
+                                    clearInterval(sooInter);
+                                    return true;
+                                }else{
+                                    orderingFlag.value = false;
+                                    console.log(res.data);
+                                    text.value = res.data.result.msg;
+                                }
+                                
                             }else{
+                                orderingFlag.value = false;
                                 text.value = '下单失败！';
                                 return false;
                             }
                         })
-                    }
                     
-                };
-                const checkAAA = ()=>{
-                    
-                    console.log(testArray.value)
-                    orderToken.value = testArray.value.result.data.token;
-                    orderOrigin.value = testArray.value.result.data.ga_data.grisk_id.split('_')[2];
-                    console.log('orderToken.value->',orderToken.value);
-                    console.log('orderOrigin.value->',orderOrigin.value);
-                }
-                const orderOrder = ()=>{
-                    text.value = '下单中，请稍后...';
-
-                    orderId.value ='';
-                    orderCreateTime.value = '';
-                    orderToken.value = '';
-
-                    axios.post("http://127.0.0.1:3001/orderOrder",
-                        {
-                            projectId:projectId.value,
-                            screenId:screenId.value,
-                            skuId:skuId.value,
-                            orderToken:confirmToken.value,
-                            pay_money:payMoney.value,
-                            orderOrigin:confirmOrigin.value,
-                            buyer:contactName.value,
-                            tel:contactNumber.value,
-                            buyer_infoJson:realnameList.value.filter(res=>{return res.id == currentRealnameId.value})
-                        }
-                    ).then(res=>{
-                        if(res.data.code == 200){
-                            
-                            if(!res.data.result.errno){
-                                console.log(res.data);
-
-                                orderId.value = res.data.result.data.orderId;
-                                orderCreateTime.value = res.data.result.data.orderCreateTime;
-                                orderToken.value = res.data.result.data.token;
-                                
-
-
-                                reptOrderPage.value = `https://show.bilibili.com/platform/orderDetail.html?order_id=${orderId.value}`
-                                text.value = '下单成功，请前往订单页面进行支付';
-                                clearInterval(sooInter);
-                                return true;
-                            }else{
-                                console.log(res.data);
-                                text.value = res.data.result.msg;
-                            }
-                            
-                        }else{
-                            text.value = '下单失败！';
-                            return false;
-                        }
-                    })
                 }
 
                 return {
                     msg,
+                    setInterTime,
                     text,
                     projectId,
                     ticketList,
@@ -400,11 +428,10 @@
                     veName,
                     project_label,
                     skuId,
-                    test,
+                    clickTicket,
                     screenId,
                     confirmToken,
                     confirmOrigin,
-                    checkAAA,
                     testArray,
                     disabledTag,
                     contactName,
@@ -428,7 +455,9 @@
                     targetTimestamp,
                     timeSetOrder,
                     timestampOrder,
-                    targetTimeCn
+                    targetTimeCn,
+                    targetTimestampFlag,
+                    orderingFlag
                 }
             },
             mounted(){
@@ -468,6 +497,10 @@
             justify-content: center;
             align-items: center;
             flex-direction: row;
+            background-color: white;
+        }
+        .content_box.ticketActive{
+            background-color: rgb(223, 235, 244);
         }
         .content_box{
             border: 1px solid black;
@@ -525,6 +558,7 @@
             padding: 10px;
             border-radius: 20px;
             margin-bottom: 10px;
+            background-color: white;
         }
         .screen_box > .title{
             font-size: 18px;
@@ -591,6 +625,7 @@
         .big_box {
             display: flex;
             justify-content: center;
+            background-color: white;
         }
         .confirmInformation_box{
             
@@ -697,6 +732,7 @@
             border-radius: 30px;
             font-weight: bold;
             font-size: 16px;
+            background-color: white;
         }
         .controlSystem_box > .title{
             margin-bottom: 10px;
@@ -711,6 +747,19 @@
             color: red;
             text-align: center;
         }
+        .content_box > .left_box > .timestampText{
+            color: red;
+            padding: 5px;
+            text-align: center;
+            background-color: rgb(211, 211, 211);
+            display: flex;
+            flex-direction: column;
+
+        }
+        .content_box > .left_box > .timestampText > span{
+            margin: 1px 0;
+        }
+
     </style>
 </body>
 </html>
