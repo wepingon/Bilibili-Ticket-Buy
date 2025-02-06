@@ -8,7 +8,7 @@
     <script src="./js/vue.global.js"></script>
 </head>
 <body>
-    <div id="app" >
+    <div id="app" class="app">
 
         <div class="content_box"  :class="orderingFlag ? 'content_box ticketActive':'content_box'">
             <div class="left_box">
@@ -61,8 +61,8 @@
 
 
                 <div class="input_box">
-                    <input type="text" placeholder="请输入展览Id" v-model="projectId" :disabled="disabledTag"/>
-                    <button @click="getTicketInf" :disabled="disabledTag">查询</button>
+                    <input type="text" placeholder="请输入展览Id" v-model="projectId"/>
+                    <button @click="getTicketInf" >查询</button>
                     <button @click="checkOrder">确认信息</button>
                 </div>
                 <div class="big_box" v-show="confirmToken != '' ">
@@ -114,6 +114,9 @@
                     <h5 v-show="project_label != ''">展览日期：{{project_label}}</h5>
                     <a :href="projectId != 0  ? 'https://show.bilibili.com/platform/detail.html?id=' + projectId : '#'" target="_blank" v-show="veName != ''">快速直达详情页面</a>
                     <div class="screen_box" v-for="ss of ticketList">
+                        <div class="returnChoice" v-show="returnChoiceFlag">
+
+                        </div>
                         <div class="saleTag">
                             <span>该日票种{{ss.saleFlag.display_name}}</span>
                         </div>
@@ -194,6 +197,7 @@
                 const nowTimestamp = ref('');
                 const targetTimestamp = ref('');
                 const targetTimeCn = ref('');
+                const returnChoiceFlag = ref(false);
                 const getRealnameList = ()=>{
                     realnameList.value = '';
                     text.value = '获取实名观演者信息中....'
@@ -249,9 +253,13 @@
                     veName.value = '';
                     skuId.value = '';
                     screenId.value = '';
+                    returnChoiceFlag.value = false;
+                    clearInterval(sooInter);
                     text.value = '获取展览数据中...';
                     project_label.value = '';
                     ticketList.value = [];
+                    confirmToken.value = '';
+                    confirmOrigin.value = '';
                     axios.post('http://127.0.0.1:3001/getTicketInformation',
                         {
                             projectId:projectId.value
@@ -344,7 +352,7 @@
                                     disabledTag.value = true
                                     confirmToken.value = res.data.result.data.token;
                                     confirmOrigin.value = res.data.result.data.ga_data.grisk_id.split('_')[2];
-
+                                    returnChoiceFlag.value = true;
                                     reptHref.value = `https://show.bilibili.com/platform/confirmOrder.html?token=${confirmToken.value}&project_id=${projectId.value}`
                                     if(flag == 'qo'){
                                         orderOrder();
@@ -457,7 +465,8 @@
                     timestampOrder,
                     targetTimeCn,
                     targetTimestampFlag,
-                    orderingFlag
+                    orderingFlag,
+                    returnChoiceFlag
                 }
             },
             mounted(){
@@ -480,7 +489,7 @@
                     this.nowTimeCn = `${ayear}-${amonth}-${aday} ${ahour}:${aminutes}:${aseconds}`;
                     this.nowTimestamp = a.getTime();
                 },
-                    1000)
+                    500)
             }
         })
         const App = app.mount("#app");
@@ -553,12 +562,22 @@
             margin: 5px 0;
         }
         .screen_box{
+            position: relative;
             border: 1px solid black;
             width: 800px;
             padding: 10px;
             border-radius: 20px;
             margin-bottom: 10px;
             background-color: white;
+        }
+        .screen_box > .returnChoice{
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(221, 221, 221, 0.5);
+            border-radius: 20px;
         }
         .screen_box > .title{
             font-size: 18px;
