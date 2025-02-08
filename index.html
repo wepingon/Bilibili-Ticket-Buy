@@ -125,7 +125,7 @@
                         </div>
                         
                         <div class="allTicket_box">
-                            <div  v-for="s of ss.ticket_list" :class="skuId == s.id ? 'ticket_box active' : 'ticket_box'" data-skuid="s.id"  @click="clickTicket(ss.id,s.id,s.price)" >
+                            <div  v-for="s of ss.ticket_list" :class="skuId == s.id ? 'ticket_box active' : 'ticket_box'" data-skuid="s.id"  @click="clickTicket(ss.id,s.id,s.price,s.saleStart)" >
                                 <div class="saleTag">
                                     <span>该票种{{s.sale_flag.display_name}}</span>
                                 </div>
@@ -197,6 +197,7 @@
                 const nowTimestamp = ref('');
                 const targetTimestamp = ref('');
                 const targetTimeCn = ref('');
+                const saleStartStamp = ref('');
                 const returnChoiceFlag = ref(false);
                 const getRealnameList = ()=>{
                     realnameList.value = '';
@@ -253,6 +254,9 @@
                     veName.value = '';
                     skuId.value = '';
                     screenId.value = '';
+                    orderId.value = '';
+                    orderCreateTime.value = '';
+                    orderToken.value = '';
                     returnChoiceFlag.value = false;
                     clearInterval(sooInter);
                     text.value = '获取展览数据中...';
@@ -320,13 +324,14 @@
                     
                     
                 }
-                const clickTicket = (a,b,c)=>{
+                const clickTicket = (a,b,c,d)=>{
                     screenId.value = '';
                     skuId.value = '';
                     
                     screenId.value = a;
                     skuId.value = b;
                     payMoney.value = c;
+                    saleStartStamp.value = d * 1000;
                     console.log(`screenId->${screenId.value},skuId->${skuId.value},payMoney->${payMoney.value}`);
                 }
                 const checkOrder = (flag)=>{
@@ -338,6 +343,12 @@
                             text.value = '请选择票种'
                             return false;
                         }else{
+                            if(saleStartStamp.value > nowTimestamp.value){
+                                let a = confirm('当前时间早于开售时间，尝试下单的话你的账号有可能会遭遇风控，确定继续吗？')
+                                if(!a){
+                                   return false
+                                }
+                            }
                             axios.post("http://127.0.0.1:3001/requestOrderToken",
                             {
                                 projectId:projectId.value,
@@ -466,7 +477,8 @@
                     targetTimeCn,
                     targetTimestampFlag,
                     orderingFlag,
-                    returnChoiceFlag
+                    returnChoiceFlag,
+                    saleStartStamp
                 }
             },
             mounted(){
