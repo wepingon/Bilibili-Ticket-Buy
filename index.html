@@ -72,7 +72,7 @@
                         </div>
                         <div class="inf" >
                             <span>确认信息token:{{confirmToken}}</span>
-                            <span>请求时间:{{confirmOrigin}}</span>
+                            <span>请求时间:{{getNowTime(confirmOrigin / 1000)}}</span>
                             <a :href="reptHref" target="_blank">快速跳转至下单页面</a>
                         </div>
                         <!-- <div class="contact">
@@ -205,6 +205,7 @@
                     axios.post('http://127.0.0.1:3001/getRealnameList').then(res=>{
                         if(res.data.code == 200){
                             if(!res.data.result.errno){
+                                currentRealnameId.value = '';
                                 realnameList.value = res.data.result.data.list
                                 text.value = '获取实名观演者信息成功'
                             }else{
@@ -308,12 +309,20 @@
                         alert('请正确设置时间！');
                         return false;
                     }else{
-                        if(screenId.value == '' || skuId.value == ''){
-                            alert('请先选择票档后再设置定时任务！');
+                        if(screenId.value == '' || skuId.value == '' || currentRealnameId.value == ''){
+                            alert('请先选择票档或者实名观演者后再设置定时任务！');
                         }else{
-                            // console.logtest('targetTimestamp.value->',targetTimeCn.value)
                             let a = new Date(targetTimeCn.value);
                             targetTimestamp.value  = a.getTime();
+                            if(saleStartStamp.value > targetTimestamp.value){
+                                let a = confirm('设置的定时时间早于开售时间，尝试下单的话你的账号有可能会遭遇风控，确定继续吗？')
+                                if(!a){
+                                   text.value = '';
+                                   return false
+                                }
+                            }
+                            // console.logtest('targetTimestamp.value->',targetTimeCn.value)
+                            
                             // console.log(targetTimestamp.value);
                             alert('定时设置成功!');
                             targetTimestampFlag.value = true;
@@ -336,16 +345,17 @@
                 }
                 const checkOrder = (flag)=>{
 
-                        text.value = '';
+                        text.value = '确认信息中...';
                         confirmToken.value ='';
                         confirmOrigin.value ='';
-                        if(skuId.value == ''){
-                            text.value = '请选择票种'
+                        if(skuId.value == '' || !currentRealnameId.value){
+                            text.value = '请先选择票种或实名观演者'
                             return false;
                         }else{
                             if(saleStartStamp.value > nowTimestamp.value){
                                 let a = confirm('当前时间早于开售时间，尝试下单的话你的账号有可能会遭遇风控，确定继续吗？')
                                 if(!a){
+                                   text.value = '';
                                    return false
                                 }
                             }
@@ -365,6 +375,7 @@
                                     confirmOrigin.value = res.data.result.data.ga_data.grisk_id.split('_')[2];
                                     returnChoiceFlag.value = true;
                                     reptHref.value = `https://show.bilibili.com/platform/confirmOrder.html?token=${confirmToken.value}&project_id=${projectId.value}`
+                                    text.value = '确认信息成功';
                                     if(flag == 'qo'){
                                         orderOrder();
                                         sooInter = setInterval(()=>{orderOrder()},setInterTime.value);
@@ -409,6 +420,7 @@
                             if(res.data.code == 200){
                                 
                                 if(!res.data.result.errno){
+                                 
                                     console.log(res.data);
 
                                     orderId.value = res.data.result.data.orderId;
@@ -421,6 +433,10 @@
                                     text.value = '下单成功，请前往订单页面进行支付';
                                     clearInterval(sooInter);
                                     return true;
+                                }else if(res.data.result.errno == 100050){
+                                    text.value = res.data.result.msg;
+                                    clearInterval(sooInter);
+                                    checkOrder('qo');
                                 }else{
                                     orderingFlag.value = false;
                                     console.log(res.data);
@@ -546,6 +562,7 @@
         }
         .input_box {
             text-align: center;
+            margin: 5px 0;
         }
         .input_box > input{
             padding: 5px;
@@ -666,6 +683,7 @@
             width: 400px;
             border-radius: 20px;
             box-shadow: 0 0 3px;
+            background-color: hsla(160, 93%, 71%, 0.317);
         }
         .confirmInformation_box > .title{
             text-align: center;
@@ -779,10 +797,13 @@
             text-align: center;
         }
         .content_box > .left_box > .timestampText{
+            border: 1px solid red;
+            border-radius: 20px;
+            box-shadow: 0 0 2px;
             color: red;
             padding: 5px;
             text-align: center;
-            background-color: rgb(211, 211, 211);
+            background-color: rgb(227, 225, 225);
             display: flex;
             flex-direction: column;
 
