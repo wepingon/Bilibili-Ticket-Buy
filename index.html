@@ -32,17 +32,22 @@
                                 <span>选择实名观演者</span>
                             </div>
                             <div class="button">
-                                <button @click="getRealnameList">获取实名观演者信息</button><span>←记得先获取实名观演者信息</span>
+                                <div>
+                                    <button @click="getRealnameList">获取实名观演者信息</button><span>←记得先获取实名观演者信息</span>
+                                </div>
+                                <div class="susCheckbox" v-show="realnameList.length >= 1">
+                                    <input type="checkbox" v-model="disSusFlag"/><span>显示敏感信息</span>
+                                </div>
                             </div>
                             <div v-for="s of realnameList" @click="choiceRealname(s.id)" :class="s.id == currentRealnameId ? 'single_name active':'single_name'">
                                 <div class="name">
-                                    <span>姓名：{{s.name}}</span>
+                                    <span>姓名：{{disSusFlag ?  s.name : s.nameReplace}}</span>
                                 </div>
                                 <div class="identifyId">
-                                    <span>身份证：{{s.personal_id}}</span>
+                                    <span>身份证：{{disSusFlag ? s.personal_id : s.personal_idReplace}}</span>
                                 </div>
                                 <div class="phoneNumber">
-                                    <span>电话：{{s.tel}}</span>
+                                    <span>电话：{{disSusFlag ? s.tel : s.telReplace}}</span>
                                 </div>
                             </div>
                         </div>
@@ -189,6 +194,7 @@
                 //可修改代码 结束
 
                 //下列所有代码无需修改。
+                const disSusFlag = ref(false);
                 const orderingFlag = ref(false);
                 const msg = ref('OK！！！！！');
                 const ticketList = ref([]);
@@ -225,6 +231,11 @@
                             if(!res.data.result.errno){
                                 currentRealnameId.value = '';
                                 realnameList.value = res.data.result.data.list
+                                res.data.result.data.list.forEach(element => {
+                                    element.nameReplace = element.name.substring(0, 1)+"*"+element.name.substr(element.name.length-1)
+                                    element.personal_idReplace = element.personal_id.substring(0, 1)+"****************"+element.personal_id.substr(element.personal_id.length-1)
+                                    element.telReplace = element.tel.substring(0, 1)+"*********"+element.tel.substr(element.tel.length-1)
+                                });
                                 text.value = '获取实名观演者信息成功'
                             }else{
                                 text.value = res.data.result.msg;
@@ -528,7 +539,8 @@
                     orderingFlag,
                     returnChoiceFlag,
                     saleStartStamp,
-                    choiceGood
+                    choiceGood,
+                    disSusFlag
                 }
             },
             mounted(){
@@ -795,6 +807,20 @@
         .buyer_box > .realname > .text{
             text-align: center;
             margin: 5px 0 ;
+        }
+        .buyer_box > .realname > .button{
+            display: flex;
+            flex-direction: column;
+
+        }
+        .buyer_box > .realname > .button > .susCheckbox{
+            display: flex;
+            flex-direction: row;
+            margin: 4px 0;
+        }
+        .buyer_box > .realname > .button > .susCheckbox > input{
+            margin: 0;
+
         }
         .buyer_box > .realname > .single_name{
             border: 1px solid black;
